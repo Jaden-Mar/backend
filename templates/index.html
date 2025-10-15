@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Chat</title>
+  
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='chat.js') }}"></script>
+
 </head>
 <body>
 <div class="chat-container">
@@ -80,3 +82,4 @@ document.getElementById('message-form').addEventListener('submit', e => {
 </script>
 </body>
 </html>
+
