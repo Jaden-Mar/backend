@@ -2,84 +2,39 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
-  
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<script src="{{ url_for('static', filename='chat.js') }}"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-<div class="chat-container">
-    <div class="users-list">
-        <h2>Użytkownicy</h2>
-        <ul id="users">
-            {% for u in users %}
-            <li data-id="{{ u.id }}" class="{% if u.online %}online{% else %}offline{% endif %}">
-                {{ u.username }}
-            </li>
-            {% endfor %}
-        </ul>
+    <header>
+        <h1>Witaj, {{ username }}!</h1>
         <a href="{{ url_for('logout') }}" class="logout">Wyloguj</a>
-    </div>
+    </header>
 
-    <div class="chat-box">
-        <h2 id="chat-with">Wybierz użytkownika</h2>
-        <div id="messages" class="messages"></div>
-        <form id="message-form" style="display:none;">
-            <input type="text" id="message-input" placeholder="Napisz wiadomość..." autocomplete="off">
-            <button type="submit">Wyślij</button>
-        </form>
-    </div>
-</div>
+    <main>
+        <aside>
+            <h2>Użytkownicy</h2>
+            <ul id="user-list">
+                {% for u in users %}
+                    <li data-id="{{ u.id }}" class="{% if u.online %}online{% else %}offline{% endif %}">
+                        {{ u.username }} {% if u.online %}• Online{% else %}• Offline{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </aside>
 
-<script src="{{ url_for('static', filename='chat.js') }}"></script>
-<script>
-const myId = {{ my_id }};
-const socket = io();
+        <section id="chat-section">
+            <h2 id="chat-with">Wybierz użytkownika</h2>
+            <div id="chat-box"></div>
+            <form id="chat-form">
+                <input type="text" id="chat-input" placeholder="Napisz wiadomość..." autocomplete="off">
+                <button type="submit">Wyślij</button>
+            </form>
+        </section>
+    </main>
 
-let currentReceiverId = null;
-
-document.querySelectorAll('#users li').forEach(li => {
-    li.addEventListener('click', () => {
-        currentReceiverId = li.dataset.id;
-        document.getElementById('chat-with').innerText = li.innerText;
-        document.getElementById('message-form').style.display = 'flex';
-        document.getElementById('messages').innerHTML = '';
-        socket.emit('join_chat', {receiver_id: parseInt(currentReceiverId)});
-    });
-});
-
-socket.on('load_messages', messages => {
-    const msgBox = document.getElementById('messages');
-    messages.forEach(m => {
-        const div = document.createElement('div');
-        div.className = m.sender === "{{ current_user.username }}" ? 'message sent' : 'message received';
-        div.textContent = `${m.sender}: ${m.body}`;
-        msgBox.appendChild(div);
-    });
-    msgBox.scrollTop = msgBox.scrollHeight;
-});
-
-socket.on('receive_message', data => {
-    if (parseInt(currentReceiverId) === parseInt(data.sender === "{{ current_user.username }}" ? data.receiver_id : data.sender_id)) {
-        const msgBox = document.getElementById('messages');
-        const div = document.createElement('div');
-        div.className = data.sender === "{{ current_user.username }}" ? 'message sent' : 'message received';
-        div.textContent = `${data.sender}: ${data.body}`;
-        msgBox.appendChild(div);
-        msgBox.scrollTop = msgBox.scrollHeight;
-    }
-});
-
-document.getElementById('message-form').addEventListener('submit', e => {
-    e.preventDefault();
-    const input = document.getElementById('message-input');
-    if (input.value.trim() && currentReceiverId) {
-        socket.emit('send_message', {receiver_id: parseInt(currentReceiverId), body: input.value});
-        input.value = '';
-    }
-});
-</script>
+    <script src="{{ url_for('static', filename='chat.js') }}"></script>
 </body>
 </html>
-
