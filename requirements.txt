@@ -3,3 +3,13 @@ uvicorn
 flask
 flask-socketio
 eventlet
+flask_bcrypt
+flask
+flask-socketio
+flask-bcrypt
+flask-login
+flask-cors
+flask-sqlalchemy
+eventlet
+python-dotenv
+gunicorn
