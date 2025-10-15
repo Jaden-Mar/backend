@@ -1,24 +1,153 @@
-function sendMessage() {
-    const input = document.getElementById("msg");
-    const msg = input.value;
-    const receiver_id = 1; // tymczasowo, wybierz w HTML dynamicznie
-    socket.emit('send_message', {receiver_id, body: msg});
-    input.value = '';
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
 }
 
-socket.on('receive_message', data => {
-    const ul = document.getElementById("messages");
-    const li = document.createElement("li");
-    li.textContent = `${data.sender}: ${data.body}`;
-    ul.appendChild(li);
-});
+.auth-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
 
-socket.on('load_messages', msgs => {
-    const ul = document.getElementById("messages");
-    ul.innerHTML = '';
-    msgs.forEach(m => {
-        const li = document.createElement("li");
-        li.textContent = `${m.sender}: ${m.body}`;
-        ul.appendChild(li);
-    });
-});
+.auth-container h1 {
+    text-align: center;
+}
+
+.auth-container input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    box-sizing: border-box;
+}
+
+.auth-container button {
+    width: 100%;
+    padding: 10px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.auth-container button:hover {
+    background: #45a049;
+}
+
+.flashes {
+    color: red;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+}
+
+.chat-container {
+    display: flex;
+    height: 100vh;
+}
+
+.users-list {
+    width: 220px;
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.users-list h2 {
+    margin-top: 0;
+}
+
+.users-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.users-list li {
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.users-list li.online {
+    background: #27ae60;
+}
+
+.users-list li.offline {
+    background: #7f8c8d;
+}
+
+.users-list li:hover {
+    opacity: 0.8;
+}
+
+.users-list .logout {
+    display: block;
+    margin-top: 20px;
+    color: white;
+    text-decoration: none;
+}
+
+.chat-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ecf0f1;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.chat-box h2 {
+    margin-top: 0;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.message {
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 20px;
+    max-width: 70%;
+}
+
+.message.sent {
+    background: #3498db;
+    color: white;
+    align-self: flex-end;
+}
+
+.message.received {
+    background: #bdc3c7;
+    color: black;
+    align-self: flex-start;
+}
+
+#message-form {
+    display: flex;
+}
+
+#message-form input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+}
+
+#message-form button {
+    padding: 10px 20px;
+    margin-left: 10px;
+    border-radius: 20px;
+    border: none;
+    background: #2ecc71;
+    color: white;
+    cursor: pointer;
+}
