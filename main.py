@@ -1,29 +1,24 @@
+import os
+import datetime
+import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_socketio import SocketIO, join_room, emit
-import sqlite3, datetime, time
-import eventlet
 
-# ==============================
-# Konfiguracja Flask + SocketIO
-# ==============================
-app = Flask(__name__, static_folder='static', template_folder='templates')
+app = Flask(__name__)
 app.secret_key = "tajny_klucz"
-bcrypt = Bcrypt(app)
 
+bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='eventlet')
 
 DB_PATH = "users.db"
 
-# ==============================
-# Inicjalizacja bazy danych
-# ==============================
+# === Inicjalizacja bazy danych ===
 def init_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,9 +36,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ==============================
-# Klasa użytkownika
-# ==============================
+# === Klasa użytkownika ===
 class User(UserMixin):
     def __init__(self, id, username, password, last_active=None):
         self.id = id
@@ -62,27 +55,14 @@ def load_user(user_id):
         return User(*u)
     return None
 
-# ==============================
-# Pomocnicza funkcja: aktualizacja aktywności
-# ==============================
 def update_last_active(user_id):
-    for _ in range(5):  # próba kilku razy w razie blokady DB
-        try:
-            conn = sqlite3.connect(DB_PATH, timeout=10)
-            c = conn.cursor()
-            c.execute("UPDATE users SET last_active=? WHERE id=?", (datetime.datetime.now().isoformat(), user_id))
-            conn.commit()
-            conn.close()
-            return
-        except sqlite3.OperationalError as e:
-            if "database is locked" in str(e):
-                time.sleep(0.1)
-            else:
-                raise
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE users SET last_active=? WHERE id=?", (datetime.datetime.now().isoformat(), user_id))
+    conn.commit()
+    conn.close()
 
-# ==============================
-# ROUTES
-# ==============================
+# === ROUTES ===
 @app.route('/')
 @login_required
 def index():
@@ -101,10 +81,7 @@ def index():
             try:
                 last_active = datetime.datetime.fromisoformat(u[2])
             except:
-                try:
-                    last_active = datetime.datetime.strptime(u[2], "%Y-%m-%d %H:%M:%S.%f")
-                except:
-                    last_active = datetime.datetime.strptime(u[2], "%Y-%m-%d %H:%M:%S")
+                last_active = datetime.datetime.strptime(u[2], "%Y-%m-%d %H:%M:%S.%f")
         online = last_active and (now - last_active).total_seconds() < 120
         user_list.append({"id": u[0], "username": u[1], "online": online})
 
@@ -153,9 +130,7 @@ def logout():
     flash("Wylogowano")
     return redirect(url_for('login'))
 
-# ==============================
-# SOCKETIO EVENTS
-# ==============================
+# === SOCKETIO EVENTS ===
 @socketio.on('join_chat')
 def handle_join_chat(data):
     receiver_id = data['receiver_id']
@@ -194,10 +169,7 @@ def handle_send_message(data):
         'room': room
     }, room=room)
 
-# ==============================
-# URUCHOMIENIE
-# ==============================
 if __name__=='__main__':
     init_db()
-    # socketio.run(app, debug=True)  # lokalnie
-    socketio.run(app, host='0.0.0.0', port=10000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
