@@ -137,3 +137,67 @@ body {
 .chat-input button:hover {
     background: #2980b9;
 }
+
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #ecf0f1;
+}
+
+.auth-box {
+    background: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.auth-box h2 {
+    margin-bottom: 20px;
+    color: #3498db;
+}
+
+.auth-box input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.auth-box button {
+    width: 100%;
+    padding: 10px;
+    background: #3498db;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.auth-box button:hover {
+    background: #2980b9;
+}
+
+.auth-box a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.auth-box a:hover {
+    text-decoration: underline;
+}
+
+.flash-messages p {
+    background: #e74c3c;
+    color: #fff;
+    padding: 8px;
+    border-radius: 5px;
+    margin: 5px 0;
+    font-size: 14px;
+}
