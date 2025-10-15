@@ -1,74 +1,29 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>MiniChat</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Chat</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='chat.js') }}"></script>
 </head>
 <body>
-<div class="app">
-    <div class="sidebar">
-        <h3>👤 {{ username }}</h3>
-        <h4>Użytkownicy</h4>
-        <ul id="users">
-            {% for u in users %}
-                <li onclick="selectUser({{ u.id }}, '{{ u.username }}')" class="{{ 'online' if u.online else 'offline' }}">
-                    {{ u.username }}
-                </li>
-            {% endfor %}
-        </ul>
-        <a href="{{ url_for('logout') }}" class="logout">Wyloguj</a>
-    </div>
+<h2>Welcome, {{ username }}</h2>
+<a href="/logout">Logout</a>
+<h3>Users:</h3>
+<ul>
+{% for u in users %}
+<li data-id="{{ u.id }}">{{ u.username }} {% if u.online %}(Online){% endif %}</li>
+{% endfor %}
+</ul>
 
-    <div class="chat">
-        <div id="chat-header">Wybierz rozmówcę</div>
-        <div id="messages"></div>
-        <div class="input-area">
-            <input id="msg" placeholder="Napisz wiadomość...">
-            <button onclick="send()">Wyślij</button>
-        </div>
-    </div>
+<div id="chat-window">
+    <ul id="messages"></ul>
+    <input type="text" id="msg" placeholder="Type message">
+    <button onclick="sendMessage()">Send</button>
 </div>
 
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-let currentId = null;
-let currentRoom = null;
-let socket = io();
-
-function selectUser(id, name) {
-    currentId = id;
-    currentRoom = `room_${Math.min({{ my_id }}, id)}_${Math.max({{ my_id }}, id)}`;
-    document.getElementById('chat-header').textContent = 'Czat z: ' + name;
-    socket.emit('join_chat', {receiver_id: id});
-}
-
-socket.on('load_messages', function(msgs){
-    const box = document.getElementById('messages');
-    box.innerHTML = '';
-    msgs.forEach(m => {
-        const div = document.createElement('div');
-        div.textContent = `${m.sender}: ${m.body}`;
-        box.appendChild(div);
-    });
-    box.scrollTop = box.scrollHeight;
-});
-
-socket.on('receive_message', function(msg){
-    if(msg.room !== currentRoom) return;
-    const box = document.getElementById('messages');
-    const div = document.createElement('div');
-    div.textContent = `${msg.sender}: ${msg.body}`;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-});
-
-function send() {
-    const msg = document.getElementById('msg').value;
-    if(!currentId || !msg) return;
-    socket.emit('send_message', {receiver_id: currentId, body: msg});
-    document.getElementById('msg').value = '';
-}
+    const myId = {{ my_id }};
+    const socket = io();
 </script>
 </body>
 </html>
