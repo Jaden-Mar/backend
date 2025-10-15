@@ -8,33 +8,100 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Witaj, {{ username }}!</h1>
-        <a href="{{ url_for('logout') }}" class="logout">Wyloguj</a>
-    </header>
-
-    <main>
-        <aside>
+    <div class="container">
+        <div class="sidebar">
             <h2>Użytkownicy</h2>
-            <ul id="user-list">
-                {% for u in users %}
-                    <li data-id="{{ u.id }}" class="{% if u.online %}online{% else %}offline{% endif %}">
-                        {{ u.username }} {% if u.online %}• Online{% else %}• Offline{% endif %}
+            <ul id="userList">
+                {% for user in users %}
+                    <li data-id="{{ user.id }}">
+                        {{ user.username }}
+                        {% if user.online %}
+                            <span class="status online"></span>
+                        {% else %}
+                            <span class="status offline"></span>
+                        {% endif %}
                     </li>
                 {% endfor %}
             </ul>
-        </aside>
+            <div class="logout">
+                <a href="{{ url_for('logout') }}">Wyloguj się</a>
+            </div>
+        </div>
 
-        <section id="chat-section">
-            <h2 id="chat-with">Wybierz użytkownika</h2>
-            <div id="chat-box"></div>
-            <form id="chat-form">
-                <input type="text" id="chat-input" placeholder="Napisz wiadomość..." autocomplete="off">
-                <button type="submit">Wyślij</button>
-            </form>
-        </section>
-    </main>
+        <div class="chat-area">
+            <div class="chat-header">
+                <h2 id="chatWith">Wybierz użytkownika</h2>
+            </div>
+            <div class="chat-messages" id="messages">
+                <!-- wiadomości będą tu dodawane dynamicznie -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Napisz wiadomość..." disabled>
+                <button id="sendBtn" disabled>Wyślij</button>
+            </div>
+        </div>
+    </div>
 
-    <script src="{{ url_for('static', filename='chat.js') }}"></script>
+    <script>
+        const socket = io();
+
+        let currentReceiverId = null;
+
+        const userListItems = document.querySelectorAll("#userList li");
+        const chatWith = document.getElementById("chatWith");
+        const messagesContainer = document.getElementById("messages");
+        const messageInput = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        // kliknięcie w użytkownika
+        userListItems.forEach(item => {
+            item.addEventListener("click", () => {
+                currentReceiverId = item.dataset.id;
+                chatWith.textContent = "Chat z " + item.textContent.trim();
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messagesContainer.innerHTML = "";
+                socket.emit("join_chat", { receiver_id: parseInt(currentReceiverId) });
+            });
+        });
+
+        // odbieranie wiadomości historycznych
+        socket.on("load_messages", msgs => {
+            messagesContainer.innerHTML = "";
+            msgs.forEach(msg => {
+                const div = document.createElement("div");
+                div.classList.add("message");
+                if(msg.sender === "{{ username }}") div.classList.add("sent");
+                div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.body}`;
+                messagesContainer.appendChild(div);
+            });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+
+        // odbieranie wiadomości w czasie rzeczywistym
+        socket.on("receive_message", msg => {
+            if(currentReceiverId == msg.room.split("_")[2] || currentReceiverId == msg.room.split("_")[1]){
+                const div = document.createElement("div");
+                div.classList.add("message");
+                if(msg.sender === "{{ username }}") div.classList.add("sent");
+                div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.body}`;
+                messagesContainer.appendChild(div);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        });
+
+        // wysyłanie wiadomości
+        sendBtn.addEventListener("click", () => {
+            const body = messageInput.value.trim();
+            if(body && currentReceiverId){
+                socket.emit("send_message", { receiver_id: parseInt(currentReceiverId), body });
+                messageInput.value = "";
+            }
+        });
+
+        messageInput.addEventListener("keypress", (e) => {
+            if(e.key === "Enter") sendBtn.click();
+        });
+    </script>
 </body>
 </html>
