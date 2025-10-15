@@ -1,29 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
+    <meta charset="UTF-8">
     <title>Chat</title>
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='chat.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-<h2>Welcome, {{ username }}</h2>
-<a href="/logout">Logout</a>
-<h3>Users:</h3>
-<ul>
-{% for u in users %}
-<li data-id="{{ u.id }}">{{ u.username }} {% if u.online %}(Online){% endif %}</li>
-{% endfor %}
-</ul>
+<div class="chat-container">
+    <div class="users-list">
+        <h2>Użytkownicy</h2>
+        <ul id="users">
+            {% for u in users %}
+            <li data-id="{{ u.id }}" class="{% if u.online %}online{% else %}offline{% endif %}">
+                {{ u.username }}
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('logout') }}" class="logout">Wyloguj</a>
+    </div>
 
-<div id="chat-window">
-    <ul id="messages"></ul>
-    <input type="text" id="msg" placeholder="Type message">
-    <button onclick="sendMessage()">Send</button>
+    <div class="chat-box">
+        <h2 id="chat-with">Wybierz użytkownika</h2>
+        <div id="messages" class="messages"></div>
+        <form id="message-form" style="display:none;">
+            <input type="text" id="message-input" placeholder="Napisz wiadomość..." autocomplete="off">
+            <button type="submit">Wyślij</button>
+        </form>
+    </div>
 </div>
 
+<script src="{{ url_for('static', filename='chat.js') }}"></script>
 <script>
-    const myId = {{ my_id }};
-    const socket = io();
+const myId = {{ my_id }};
+const socket = io();
+
+let currentReceiverId = null;
+
+document.querySelectorAll('#users li').forEach(li => {
+    li.addEventListener('click', () => {
+        currentReceiverId = li.dataset.id;
+        document.getElementById('chat-with').innerText = li.innerText;
+        document.getElementById('message-form').style.display = 'flex';
+        document.getElementById('messages').innerHTML = '';
+        socket.emit('join_chat', {receiver_id: parseInt(currentReceiverId)});
+    });
+});
+
+socket.on('load_messages', messages => {
+    const msgBox = document.getElementById('messages');
+    messages.forEach(m => {
+        const div = document.createElement('div');
+        div.className = m.sender === "{{ current_user.username }}" ? 'message sent' : 'message received';
+        div.textContent = `${m.sender}: ${m.body}`;
+        msgBox.appendChild(div);
+    });
+    msgBox.scrollTop = msgBox.scrollHeight;
+});
+
+socket.on('receive_message', data => {
+    if (parseInt(currentReceiverId) === parseInt(data.sender === "{{ current_user.username }}" ? data.receiver_id : data.sender_id)) {
+        const msgBox = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = data.sender === "{{ current_user.username }}" ? 'message sent' : 'message received';
+        div.textContent = `${data.sender}: ${data.body}`;
+        msgBox.appendChild(div);
+        msgBox.scrollTop = msgBox.scrollHeight;
+    }
+});
+
+document.getElementById('message-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = document.getElementById('message-input');
+    if (input.value.trim() && currentReceiverId) {
+        socket.emit('send_message', {receiver_id: parseInt(currentReceiverId), body: input.value});
+        input.value = '';
+    }
+});
 </script>
 </body>
 </html>
