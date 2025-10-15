@@ -2,31 +2,35 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from flask_socketio import SocketIO, join_room, emit
-import sqlite3
-import datetime
+import sqlite3, datetime, time
+import eventlet
 
-# === Konfiguracja aplikacji ===
-app = Flask(__name__)
+# ==============================
+# Konfiguracja Flask + SocketIO
+# ==============================
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = "tajny_klucz"
 bcrypt = Bcrypt(app)
+
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-socketio = SocketIO(app, cors_allowed_origins="*")  # cors_allowed_origins dla Render
+
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 DB_PATH = "users.db"
 
-# === Inicjalizacja bazy danych ===
+# ==============================
+# Inicjalizacja bazy danych
+# ==============================
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     c = conn.cursor()
-    # tabela użytkowników
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL,
                     last_active DATETIME
                 )''')
-    # tabela wiadomości
     c.execute('''CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sender_id INTEGER,
@@ -37,7 +41,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-# === Klasa użytkownika ===
+# ==============================
+# Klasa użytkownika
+# ==============================
 class User(UserMixin):
     def __init__(self, id, username, password, last_active=None):
         self.id = id
@@ -56,19 +62,27 @@ def load_user(user_id):
         return User(*u)
     return None
 
-# === Pomocnicza funkcja: aktualizacja aktywności ===
+# ==============================
+# Pomocnicza funkcja: aktualizacja aktywności
+# ==============================
 def update_last_active(user_id):
-    try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)  # timeout, żeby nie blokowało
-        c = conn.cursor()
-        c.execute("UPDATE users SET last_active=? WHERE id=?", (datetime.datetime.now(), user_id))
-        conn.commit()
-    except sqlite3.OperationalError as e:
-        print("Błąd bazy danych:", e)
-    finally:
-        conn.close()
+    for _ in range(5):  # próba kilku razy w razie blokady DB
+        try:
+            conn = sqlite3.connect(DB_PATH, timeout=10)
+            c = conn.cursor()
+            c.execute("UPDATE users SET last_active=? WHERE id=?", (datetime.datetime.now().isoformat(), user_id))
+            conn.commit()
+            conn.close()
+            return
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                time.sleep(0.1)
+            else:
+                raise
 
-# === ROUTES ===
+# ==============================
+# ROUTES
+# ==============================
 @app.route('/')
 @login_required
 def index():
@@ -123,7 +137,7 @@ def register():
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("INSERT INTO users (username, password, last_active) VALUES (?, ?, ?)",
-                      (username, password, datetime.datetime.now()))
+                      (username, password, datetime.datetime.now().isoformat()))
             conn.commit()
             conn.close()
             flash("Rejestracja udana, możesz się zalogować!")
@@ -139,7 +153,9 @@ def logout():
     flash("Wylogowano")
     return redirect(url_for('login'))
 
-# === SOCKETIO EVENTS ===
+# ==============================
+# SOCKETIO EVENTS
+# ==============================
 @socketio.on('join_chat')
 def handle_join_chat(data):
     receiver_id = data['receiver_id']
@@ -178,10 +194,10 @@ def handle_send_message(data):
         'room': room
     }, room=room)
 
-# === URUCHOMIENIE ===
+# ==============================
+# URUCHOMIENIE
+# ==============================
 if __name__=='__main__':
     init_db()
-    # użycie eventlet na Render
-    import eventlet
-    import eventlet.wsgi
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 10000)), app)
+    # socketio.run(app, debug=True)  # lokalnie
+    socketio.run(app, host='0.0.0.0', port=10000, debug=True)
