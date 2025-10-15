@@ -3,7 +3,7 @@ uvicorn
 flask
 flask-socketio
 eventlet
-flask_bcrypt
+flask-bcrypt
 flask
 flask-socketio
 flask-bcrypt
