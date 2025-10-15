@@ -163,8 +163,8 @@ def handle_send_message(data):
     conn.close()
     emit('receive_message', {'sender': current_user.username,'body': body,'room': room}, room=room)
 
-# ===== START APP =====
-if __name__=='__main__':
-    init_db()
-    port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 10000))  # Render ustawia PORT automatycznie
+    socketio.run(app, host="0.0.0.0", port=port)
+
