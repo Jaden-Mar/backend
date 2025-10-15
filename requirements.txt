@@ -1,15 +1,7 @@
-fastapi
-uvicorn
 flask
-flask-socketio
-eventlet
-flask-bcrypt
-flask
-flask-socketio
 flask-bcrypt
 flask-login
 flask-cors
-flask-sqlalchemy
+flask-socketio
 eventlet
-python-dotenv
 gunicorn
