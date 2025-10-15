@@ -2,27 +2,30 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="auth-container">
-        <h1>Logowanie</h1>
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <ul class="flashes">
-              {% for msg in messages %}
-                <li>{{ msg }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="Nazwa użytkownika" required>
-            <input type="password" name="password" placeholder="Hasło" required>
-            <button type="submit">Zaloguj się</button>
-        </form>
-        <p>Nie masz konta? <a href="{{ url_for('register') }}">Zarejestruj się</a></p>
+        <div class="auth-box">
+            <h2>Logowanie</h2>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for message in messages %}
+                            <p>{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            <form method="POST">
+                <input type="text" name="username" placeholder="Nazwa użytkownika" required>
+                <input type="password" name="password" placeholder="Hasło" required>
+                <button type="submit">Zaloguj</button>
+            </form>
+            <p>Nie masz konta? <a href="{{ url_for('register') }}">Zarejestruj się</a></p>
+        </div>
     </div>
 </body>
 </html>
