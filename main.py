@@ -4,21 +4,17 @@ eventlet.monkey_patch()
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 import os
-import sqlite3
 import datetime
-from database import init_db, get_db_connection, ensure_tables_exist
+import sqlite3
+from database import init_db, get_db_connection
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config['SECRET_KEY'] = 'supersecretkey'
 socketio = SocketIO(app, async_mode='eventlet')
 
-# Inicjalizacja bazy danych przy starcie
+# Inicjalizacja bazy danych przy starcie aplikacji
 init_db()
-ensure_tables_exist()
 
-# -----------------------
-# ROUTES
-# -----------------------
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -30,18 +26,25 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
-        user = c.fetchone()
+        try:
+            c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+            user = c.fetchone()
+        except sqlite3.OperationalError as e:
+            conn.close()
+            return f"<h3>Błąd bazy danych: {e}</h3>", 500
+
         conn.close()
 
         if user:
             session['user_id'] = user['id']
             session['username'] = user['username']
-            # Aktualizacja ostatniej aktywności
+
             conn = get_db_connection()
-            conn.execute("UPDATE users SET last_active=? WHERE id=?", (datetime.datetime.now().isoformat(), user['id']))
+            conn.execute("UPDATE users SET last_active=? WHERE id=?",
+                         (datetime.datetime.now().isoformat(), user['id']))
             conn.commit()
             conn.close()
             return redirect(url_for('index'))
@@ -70,17 +73,11 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# -----------------------
-# SOCKET.IO
-# -----------------------
 @socketio.on('send_message')
 def handle_message(data):
     username = session.get('username', 'Anonim')
     message = data.get('message', '')
     emit('receive_message', {'username': username, 'message': message}, broadcast=True)
 
-# -----------------------
-# RUN
-# -----------------------
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
