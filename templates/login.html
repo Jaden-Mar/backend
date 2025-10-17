@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logowanie</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-box">
+    <div class="auth">
+        <div class="card">
             <h2>Logowanie</h2>
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div class="flash-messages">
-                        {% for message in messages %}
-                            <p>{{ message }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
             <form method="POST">
-                <input type="text" name="username" placeholder="Nazwa użytkownika" required>
-                <input type="password" name="password" placeholder="Hasło" required>
+                <label>Nazwa użytkownika</label>
+                <input name="username" type="text" required />
+                <label>Hasło</label>
+                <input name="password" type="password" required />
                 <button type="submit">Zaloguj</button>
             </form>
             <p>Nie masz konta? <a href="{{ url_for('register') }}">Zarejestruj się</a></p>
