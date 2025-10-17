@@ -1,24 +1,22 @@
-import eventlet
-eventlet.monkey_patch()
-
+# main.py
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
-import os
-import datetime
-import sqlite3
+import os, sqlite3, datetime
 from database import init_db, get_db_connection
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config['SECRET_KEY'] = 'supersecretkey'
-socketio = SocketIO(app, async_mode='eventlet')
 
-# Inicjalizacja bazy danych przy starcie aplikacji
+# ZAMIANA eventleta na threading
+socketio = SocketIO(app, async_mode='threading')
+
+# inicjalizacja bazy
 init_db()
 
 @app.route('/')
 def index():
     if 'user_id' in session:
-        return render_template('index.html', username=session.get('username'))
+        return render_template('index.html', username=session['username'])
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -26,22 +24,14 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-
         conn = get_db_connection()
         c = conn.cursor()
-        try:
-            c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
-            user = c.fetchone()
-        except sqlite3.OperationalError as e:
-            conn.close()
-            return f"<h3>Błąd bazy danych: {e}</h3>", 500
-
+        c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+        user = c.fetchone()
         conn.close()
-
         if user:
             session['user_id'] = user['id']
             session['username'] = user['username']
-
             conn = get_db_connection()
             conn.execute("UPDATE users SET last_active=? WHERE id=?",
                          (datetime.datetime.now().isoformat(), user['id']))
@@ -76,8 +66,7 @@ def logout():
 @socketio.on('send_message')
 def handle_message(data):
     username = session.get('username', 'Anonim')
-    message = data.get('message', '')
-    emit('receive_message', {'username': username, 'message': message}, broadcast=True)
+    emit('receive_message', {'username': username, 'message': data.get('message', '')}, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
